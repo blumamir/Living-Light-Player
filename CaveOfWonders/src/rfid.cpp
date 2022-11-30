@@ -109,33 +109,13 @@ bool rfidReadNuid(MFRC522 rfid, byte *nuidPICC, byte nuidSize)
 }
 
 /**
- * Check if UID is in UID_TABLE
- * if found, return the State from the RFID_STATE_MAP corresponding to UID, 
- * Otherwise return RFID_KIVSEE State
- */
-enum State checkUidTable(byte UID[])
-{
-  for (byte i = 0; i < (sizeof(UID_TABLE) / sizeof(UID_TABLE[0])); i = i + 4)
-  {
-    if (UID[0] == UID_TABLE[i] &&
-        UID[1] == UID_TABLE[i + 1] &&
-        UID[2] == UID_TABLE[i + 2] &&
-        UID[3] == UID_TABLE[i + 3])
-    {
-      return RFID_STATE_MAP[i >> 2];
-    }
-  }
-  return RFID_KIVSEE;
-}
-
-/**
  * The function sending to the MFRC522 the needed commands to activate the reception
  */
-void activateRec(MFRC522 rfid)
+void activateRfidReception(MFRC522 *rfid)
 {
-  rfid.PCD_WriteRegister(rfid.FIFODataReg, rfid.PICC_CMD_REQA);
-  rfid.PCD_WriteRegister(rfid.CommandReg, rfid.PCD_Transceive);
-  rfid.PCD_WriteRegister(rfid.BitFramingReg, 0x87);
+  rfid->PCD_WriteRegister(rfid->FIFODataReg, rfid->PICC_CMD_REQA);
+  rfid->PCD_WriteRegister(rfid->CommandReg, rfid->PCD_Transceive);
+  rfid->PCD_WriteRegister(rfid->BitFramingReg, 0x87);
 }
 
 /**
