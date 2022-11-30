@@ -40,7 +40,7 @@
 int curr_file_i = 0;
 enum State back_states[] = {BACK0, BACK1, BACK2};
 enum State rfid_states[] = {RFID_QUEEN, RFID_UNDER, RFID_COME};
-const char *files_iter_rr[] = {"amir", "cave2", "cave1", "cave2", "come", "queen", "queen", "come", "come", "kivsee"};
+const char *files_iter_rr[] = {"kivsee", "kivsee", "kivsee", "kivsee"};
 // Song tracking
 enum State state, prevState = IDLE;
 unsigned long currSongTime = 0, songStartTime = 0, lastRangeTime = 0, procTime = 0;
@@ -60,15 +60,6 @@ SdLedsPlayer sd_leds_player(LEDS_PER_STRIP, display_memory, drawing_memory);
 bool status; // general use status variable
 unsigned long frame_timestamp;
 uint8_t brightness = DEFAULT_BRIGHTNESS; 
-
-// Range sensor
-Adafruit_VL53L0X lox = Adafruit_VL53L0X();
-bool rangeBooted = false;
-int rangeBootCnt = 0;
-int range = -1;
-int rangeAccum = -1;
-// bool rangeActive = false; 
-int rangeCnt = 0;
 
 // Key Switch
 int keyState = HIGH;
@@ -126,31 +117,6 @@ void setup() {
   // Teensies State setup
   stateInit();
 
-  // TOF sensor setup
-  Serial.println("Starting VL53L0X boot");
-  while ((!rangeBooted) && (rangeBootCnt < RANGE_BOOT_RETRIES)) {
-    if (lox.begin()) {
-      Serial.print(F("VL53L0X sensor boot done successfully after ")); Serial.print(rangeBootCnt); Serial.println(" attempts.");
-      rangeBooted = true;
-    }
-    else {
-      Serial.print(F("Failed to boot VL53L0X, retrying.. ")); Serial.println(rangeBootCnt);
-      rangeBootCnt++;
-      delay(1000);
-    }
-  }
-  if (rangeBooted) {
-    if (!lox.startRangeContinuous(TOF_MEAS_INTERVAL)){
-      Serial.println(F("Failed to start VL53L0X continuous ranging\n"));
-      digitalWrite(ERRORLED1, HIGH);
-    } else {
-      Serial.println(F("VL53L0X sensor started in continuous ranging mode.\n"));
-    }
-  } else {
-    Serial.println(F("Failed to boot VL53L0X, continuing without range sensor, restart teensy to retry."));
-    digitalWrite(ERRORLED1, HIGH);
-  }
-
   // RFID reader setup
   rfidBooted = rfidInit(rfid);
   if (rfidBooted) {
@@ -176,39 +142,6 @@ void setup() {
 
 void loop() {
   // unsigned long tic = millis();
-  if (rangeBooted) {
-    if (lox.isRangeComplete()) {   // TOF sensor read when measurement data is available
-      range = lox.readRangeResult();
-      // Serial.print(millis());Serial.print(" : Distance (mm): "); Serial.println(range);
-      rangeCnt++;
-      rangeAccum += range;
-      if (rangeCnt >= 3) { // number of measurements to average
-        range = rangeAccum / rangeCnt;
-        rangeAccum = 0;
-        rangeCnt = 0;
-        // Brightness by range
-        if (range > (MAX_BRIGHTNESS - DEFAULT_BRIGHTNESS)) { 
-          brightness = DEFAULT_BRIGHTNESS;
-          sd_leds_player.setBrightness(brightness);
-          // rangeActive = false; // disabling activation of song by range sensor by jumping from long distance
-        }
-        else if ((range <= (MAX_BRIGHTNESS - DEFAULT_BRIGHTNESS)) && range > 0) {
-          brightness = MAX_BRIGHTNESS - range;
-          sd_leds_player.setBrightness(brightness);
-          // rangeActive = true; // enabling activation of song by range sensor from short distance
-        }
-        // else if ((range < 40) && rangeActive && !keyActive) { // don't allow range sensor song triggering from long distance or key switch triggered
-        //   Serial.print("range sensor triggered at distance (mm): "); Serial.println(range);
-        //   state = RANGE;
-        //   sd_leds_player.load_file(files_iter_rr[state-1]);
-        //   rangeActive = false;
-        //   keyActive = true; // using the keyActive to make sure the range sensor can't trigger during its own song until next background song
-        //   frame_timestamp = sd_leds_player.load_next_frame();
-        // }
-      }
-    }
-  }
-
   // Key switch reading with debounce
   reading = digitalRead(KEYPIN);
   if (reading != lastKeyState) {
