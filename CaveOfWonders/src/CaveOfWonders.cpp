@@ -20,18 +20,17 @@
 --------------------------
 */
 
+// rfid
 #define SS_PIN 10
 #define RST_PIN 9
 #define IRQ_PIN 1   // Configurable, depends on hardware
 
-
+// leds
 #define LEDS_PER_STRIP 254
 #define MAX_BRIGHTNESS 255
 #define DEFAULT_BRIGHTNESS 50  // range is 0 (off) to 255 (max brightness)
-#define RANGE_BOOT_RETRIES 3
-#define TOF_MEAS_INTERVAL 40
-#define KEYPIN 22
-#define KEY_DEBOUNCE_TIME 50
+
+
 #define STATE_DEBOUNCE_TIME 2
 #define ERRORLED1 23
 // #define ERRORLED2 23
@@ -60,14 +59,6 @@ SdLedsPlayer sd_leds_player(LEDS_PER_STRIP, display_memory, drawing_memory);
 bool status; // general use status variable
 unsigned long frame_timestamp;
 uint8_t brightness = DEFAULT_BRIGHTNESS; 
-
-// Key Switch
-int keyState = HIGH;
-int lastKeyState = HIGH;
-unsigned long lastDebounceTime = 0;
-unsigned long debounceDelay = KEY_DEBOUNCE_TIME;
-// bool keyActive = true;
-int reading;
 
 // Monitoring vars
 unsigned long lastMonitorTime = 0;
@@ -104,10 +95,6 @@ void setup() {
   Serial.println("SD card started.");
   sd_leds_player.setBrightness(brightness);
   
-  // Key switch setup
-  pinMode(KEYPIN, INPUT_PULLUP);
-  Serial.print("GPIO pin for key switch set to: "); Serial.println(KEYPIN);
-
   // Error LEDs setup
   pinMode(ERRORLED1, OUTPUT);
   // pinMode(ERRORLED2, OUTPUT);
@@ -142,29 +129,6 @@ void setup() {
 
 void loop() {
   // unsigned long tic = millis();
-  // Key switch reading with debounce
-  reading = digitalRead(KEYPIN);
-  if (reading != lastKeyState) {
-    // reset the debouncing timer
-    lastDebounceTime = millis();
-  }
-  if ((millis() - lastDebounceTime) > debounceDelay) {
-    if (reading != keyState) {
-      keyState = reading;
-      if (keyState == HIGH) {
-        Serial.println("key switch triggered! loading LEDs file");
-        state = KEY;
-        status = sd_leds_player.load_file(files_iter_rr[state-1]);
-        if (!status) {
-          Serial.println("file load from SD failed");
-          delay(1000);
-        }
-        // keyActive = true;
-        frame_timestamp = sd_leds_player.load_next_frame();
-      }
-    }
-  }
-  lastKeyState = reading;
 
   // RFID reading using interrupts
   if (rfidBooted) {
@@ -178,7 +142,6 @@ void loop() {
           Serial.println("file load from SD failed");
           delay(1000);
         }
-        // keyActive = true; // using the keyActive to make sure the range sensor can't trigger until next background song
         frame_timestamp = sd_leds_player.load_next_frame();
         Serial.print(F("RFID card detection set state to: ")); Serial.println(state);
       }
@@ -201,7 +164,6 @@ void loop() {
         Serial.println("file load from SD failed");
         delay(1000);
       }
-      // keyActive = true; // using the keyActive to make sure the range sensor can't trigger until next background song
       frame_timestamp = sd_leds_player.load_next_frame();
       rfidKivseeFlag = false;
     } 
@@ -214,7 +176,6 @@ void loop() {
         delay(1000);
       }
       curr_file_i = (curr_file_i + 1) % (sizeof(back_states) / sizeof(back_states[0]));
-      // keyActive = false;
       nuidPICC[0] = 0x0; nuidPICC[1] = 0x0; nuidPICC[2] = 0x0; nuidPICC[3] = 0x0;
       frame_timestamp = sd_leds_player.load_next_frame();
     }
@@ -244,8 +205,6 @@ void loop() {
   // Monitor printing, not really needed
   // if((millis() - lastMonitorTime) > MonitorDelay) {
   //   Serial.println(F("COW Leds Alive"));
-  //   Serial.print(F("rangeActive: ")); Serial.println(rangeActive ? "true" : "false");
-  //   Serial.print(F("keyActive: ")); Serial.println(keyActive ? "true" : "false");
   //   lastMonitorTime = millis();
   // }
   
